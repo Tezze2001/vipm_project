@@ -9,3 +9,16 @@ Project of Visual Information Processing and Management exam
 # Dataset
 
 [small_dataset.zip](https://drive.google.com/file/d/1qSCuUL8C923zxXsUkGyIxxpG4HLXmWNe/view?usp=sharing)
+
+
+# Conda setup (non so se funziona)
+Ho esportato l'ambiente conda che sto usando con:
+  ```bash
+  conda env export --no-builds > environment.yml
+  ```
+Dovrebbe contenere i pacchetti giusti per usa CUDA
+
+Teoricamente per importarlo dovrebbe bastare fare
+```bash
+conda env create -f environment.yml
+```
