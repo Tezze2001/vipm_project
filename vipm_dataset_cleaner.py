@@ -5,13 +5,26 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import cv2
+import random
 from torchvision import transforms
 from PIL import Image
 from torchvision.models import resnet50
 from sklearn.ensemble import IsolationForest
-from skimage import io
+from skimage import io, color
 from skimage.feature import local_binary_pattern
 
+# Imposta il seed per la riproducibilità
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+set_seed(42)  # Imposta il seed globale
 
 class DatasetCleaner:
     def __init__(self, csv_path, data_folder, output_folder, feature_extractor, clean_criterion):
@@ -178,27 +191,6 @@ class DatasetCleaner:
         except Exception as e:
             print(f"Errore durante il caricamento di {file_path}: {e}")
             return None
-        
-    # Funzione per estrarre feature SIFT
-    def feature_extractor_sift(file_path):
-        try:
-            # Carica l'immagine in scala di grigi
-            image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
-            if image is None:
-                raise ValueError(f"Immagine {file_path} non valida.")
-
-            # Inizializza il rilevatore SIFT
-            sift = cv2.SIFT_create()
-            keypoints, descriptors = sift.detectAndCompute(image, None)
-
-            if descriptors is not None:
-                # Restituisci le caratteristiche come la media delle descrizioni
-                return np.mean(descriptors, axis=0)
-            else:
-                return None
-        except Exception as e:
-            print(f"Errore nell'estrazione delle feature SIFT per {file_path}: {e}")
-            return None
     
     def feature_extractor_resnet50(device=None):
         """
@@ -250,12 +242,21 @@ class DatasetCleaner:
         return extractor
 
     # Funzione per estrarre feature LBP (Local Binary Pattern)
-    def lbp_feature_extractor(file_path, radius=1, n_points=8):
+    def feature_extractor_lbp(file_path, radius=24, n_points=8):
         try:
             # Carica l'immagine in scala di grigi
             image = io.imread(file_path, as_gray=True)
             if image is None:
                 raise ValueError(f"Immagine {file_path} non valida.")
+            
+            # Converti l'immagine in uint8
+            image = (image * 255).astype(np.uint8)
+        
+            # Prendi il quadrato centrale dell'immagine 255x255
+            h, w = image.shape
+            h_start = (h - 255) // 2
+            w_start = (w - 255) // 2
+            image = image[h_start:h_start + 255, w_start:w_start + 255]
 
             # Calcola LBP per l'immagine
             lbp = local_binary_pattern(image, n_points, radius, method="uniform")
@@ -269,6 +270,85 @@ class DatasetCleaner:
         except Exception as e:
             print(f"Errore nell'estrazione delle feature LBP per {file_path}: {e}")
             return None
+        
+    def feature_extractor_lab(file_path, bins=256):
+        try:
+            # Carica l'immagine
+            image = io.imread(file_path)
+            if image is None:
+                raise ValueError(f"Immagine {file_path} non valida.")
+
+            # Converti l'immagine nello spazio colore Lab
+            lab_image = color.rgb2lab(image)
+
+            # Estrai i tre canali: L, a, b
+            l_channel = lab_image[:, :, 0]
+            a_channel = lab_image[:, :, 1]
+            b_channel = lab_image[:, :, 2]
+
+            # Calcola gli istogrammi per ciascun canale
+            l_hist, _ = np.histogram(l_channel.ravel(), bins=bins, range=(0, 100))
+            a_hist, _ = np.histogram(a_channel.ravel(), bins=bins, range=(-128, 127))
+            b_hist, _ = np.histogram(b_channel.ravel(), bins=bins, range=(-128, 127))
+
+            # Normalizza gli istogrammi
+            l_hist = l_hist.astype("float") / (l_hist.sum() + 1e-6)
+            a_hist = a_hist.astype("float") / (a_hist.sum() + 1e-6)
+            b_hist = b_hist.astype("float") / (b_hist.sum() + 1e-6)
+
+            # Concatena gli istogrammi in un unico vettore
+            lab_features = np.concatenate([l_hist, a_hist, b_hist])
+
+            return lab_features
+        except Exception as e:
+            print(f"Errore nell'estrazione delle feature Lab per {file_path}: {e}")
+            return None
+        
+        
+    def feature_extractor_combined_lbp_color(file_path, lbp_radius=24, lbp_points=8, color_bins=64):
+        """
+        Combines LBP texture features with color histogram features.
+        """
+        try:
+            # Extract LBP features
+            image = io.imread(file_path, as_gray=True)
+            if image is None:
+                raise ValueError(f"Image {file_path} invalid.")
+            
+            image = (image * 255).astype(np.uint8)
+            h, w = image.shape
+            h_start = (h - 255) // 2
+            w_start = (w - 255) // 2
+            image = image[h_start:h_start + 255, w_start:w_start + 255]
+            
+            lbp = local_binary_pattern(image, lbp_points, lbp_radius, method="uniform")
+            lbp_hist, _ = np.histogram(lbp.ravel(), bins=np.arange(0, lbp_points + 3), 
+                                     range=(0, lbp_points + 2))
+            lbp_hist = lbp_hist.astype("float")
+            lbp_hist /= (lbp_hist.sum() + 1e-6)
+
+            # Extract color features
+            color_image = io.imread(file_path)
+            if len(color_image.shape) == 2:  # Convert grayscale to RGB
+                color_image = color.gray2rgb(color_image)
+                
+            # Calculate color histograms for each channel
+            color_features = []
+            for channel in range(3):
+                hist, _ = np.histogram(color_image[:,:,channel], bins=color_bins, 
+                                     range=(0, 256))
+                hist = hist.astype("float")
+                hist /= (hist.sum() + 1e-6)
+                color_features.extend(hist)
+
+            # Combine features
+            combined_features = np.concatenate([lbp_hist, color_features])
+            return combined_features
+
+        except Exception as e:
+            print(f"Error extracting combined LBP and color features for {file_path}: {e}")
+            return None
+
 
     ### CLEAN CRITERIA
     
@@ -277,3 +357,20 @@ class DatasetCleaner:
         model = IsolationForest(contamination=contamination, random_state=42)
         model.fit(features)
         return model.predict(features) == -1  # Ritorna True per gli outlier
+    
+
+    def clean_criterion_histogram_distance(features, contamination=0.1, metric='cosine'):
+        """
+        Cleans dataset based on histogram distances from the mean representation.
+        """
+        if len(features) == 0:
+            return []
+
+        # Calculate distances from mean representation
+        mean_representation = np.mean(features, axis=0)
+        distances = cdist(features, [mean_representation], metric=metric).flatten()
+        
+        # Determine threshold based on contamination
+        threshold = np.percentile(distances, (1 - contamination) * 100)
+        
+        return distances > threshold
