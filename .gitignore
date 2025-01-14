@@ -1,4 +1,5 @@
 dataset/*
 .venv
+__pycache__
 foodX-251.pdf
 features_saved/
