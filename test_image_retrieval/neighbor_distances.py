@@ -14,6 +14,7 @@ class CentroidWeights:
         self.centroids = compute_class_centroids(X_train, y_train)
     
     def __centroid_based_weights(self, distances):
+        
         n_queries = distances.shape[0]  # Numero di query
         weights = []
 
@@ -35,6 +36,9 @@ class CentroidWeights:
 
             # Aggiungi i pesi per la query corrente
             weights.append(query_weights)
+
+        return np.array(weights)
+
         
     def __call__(self, distances):
         return self.__centroid_based_weights(distances)
