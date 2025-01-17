@@ -1,11 +1,8 @@
 dataset/*
 .venv
 __pycache__
-<<<<<<< HEAD
 foodX-251.pdf
 features_saved/
 .vscode
 .idea
-=======
 val_features_resnet50.npz
->>>>>>> 230f8a63904b608d00035ad3fb122720dc74b0b0
