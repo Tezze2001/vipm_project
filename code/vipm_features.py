@@ -68,27 +68,28 @@ class BaseFeatureExtractor(ABC):
     def get_features(self, csv, indir, outdir, normalize=False, n=None):
         """Salva le feature su disco o le carica se già disponibili."""
         # Nome del file basato sul nome della classe e sul parametro di normalizzazione
-        feature_file = os.path.join(outdir, f"{self.name}_features{'_normalized' if normalize else ''}")
+        feature_file = os.path.join(outdir, f"{self.name}_features{'_normalized' if normalize else ''}.npz")
 
         # Se il file esiste, caricalo
         if os.path.exists(feature_file):
             print(f"Caricamento delle feature da {feature_file}")
-            return np.load(feature_file)
+            npzfile = np.load(feature_file)
+            return npzfile['X'], npzfile['y'], npzfile['image_names']
+        else:
+            data = pd.read_csv(csv, header=None, names=['image_name', 'label'])
+            image_names = data['image_name'].tolist()
+            labels = data['label'].values
+            
+            # Altrimenti, estrai le feature
+            print("File non trovato. Estrazione delle feature...")
+            features = self._get_normalized_features(image_names, indir, n=n) if normalize else self._extract_list_features(
+                image_names, indir, n=n)
 
-        data = pd.read_csv(csv, header=None, names=['image_name', 'label'])
-        image_names = data['image_name'].tolist()
-        labels = data['label'].values
-
-        # Altrimenti, estrai le feature
-        print("File non trovato. Estrazione delle feature...")
-        features = self._get_normalized_features(image_names, indir, n=n) if normalize else self._extract_list_features(
-            image_names, indir, n=n)
-
-        # Salva su disco
-        os.makedirs(outdir, exist_ok=True)
-        np.savez(feature_file, X=features, y=labels, image_names=image_names)
-        print(f"Feature salvate in {feature_file}")
-        return features
+            # Salva su disco
+            os.makedirs(outdir, exist_ok=True)
+            np.savez(feature_file, X=features, y=labels, image_names=image_names)
+            print(f"Feature salvate in {feature_file}")
+            return features, labels, image_names
 
 
 class NeuralFeatureExtractor(BaseFeatureExtractor):
