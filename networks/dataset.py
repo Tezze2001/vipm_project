@@ -32,9 +32,14 @@ class FeatureDataset(Dataset):
         self.transform = transform
         self.target_transform = target_transform
         data = np.load(dataset_path, 'r')
-        self.features = torch.tensor(data['X_' + type], dtype=torch.float32)
-        self.n_classes = len(np.unique(data['y_' + type]))
-        self.labels = torch.tensor(data['y_' + type], dtype=torch.long)
+        if type == 'test':
+            self.features = torch.tensor(data['X'], dtype=torch.float32)
+            self.n_classes = len(np.unique(data['y']))
+            self.labels = torch.tensor(data['y'], dtype=torch.long)
+        else:
+            self.features = torch.tensor(data['X_' + type], dtype=torch.float32)
+            self.n_classes = len(np.unique(data['y_' + type]))
+            self.labels = torch.tensor(data['y_' + type], dtype=torch.long)
 
 
     def __len__(self):
