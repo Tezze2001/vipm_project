@@ -39,10 +39,10 @@ class ImageRetrievalKNN(ImageRetrieval):
             predictions = pipeline.predict(self.dataset)
             
         # ritorna gli indici da considerare e le loro labels
-        return range(len(predictions)), predictions
+        return list(range(len(predictions))), list(map(int, predictions))
     
     
-class ImageRetrievalKNN(ImageRetrieval):
+class ImageRetrievalBestFit(ImageRetrieval):
     def __init__(self, dataset, queryset, queryset_labels, standardize=True, n_neighbors=5, distance_metric='euclidean'):
         super().__init__(dataset, queryset, queryset_labels)
         self.n_neighbors = n_neighbors
@@ -54,6 +54,8 @@ class ImageRetrievalKNN(ImageRetrieval):
         indices = []
         labels = []
         for target_class in np.unique(self.queryset_labels):
+            # stampa senza andare a capo per mostrare la classe target
+            print(f"Classe target: {target_class}", end='\r')
             target_data = self.queryset[self.queryset_labels == target_class]
             
             # Standardizzazione dei dati se richiesto
@@ -71,5 +73,7 @@ class ImageRetrievalKNN(ImageRetrieval):
             nearest_indices = np.argsort(np.min(distances, axis=1))[:self.n_neighbors]
             indices.extend(nearest_indices)
             labels.extend([target_class] * self.n_neighbors)
-        
+        #remove np int
+        indices = list(map(int, indices))
+        labels = list(map(int, labels))
         return indices, labels

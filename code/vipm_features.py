@@ -17,9 +17,10 @@ from torchvision.models import resnet50
 class BaseFeatureExtractor(ABC):
     """Classe base astratta per l'estrazione di feature."""
 
-    def __init__(self, is_neural=False, device=None, name="base"):
+    def __init__(self, is_neural=False, device=None, name="base", file_name=None):
         self.is_neural = is_neural
         self.name = name
+        self.file_name = file_name
         if is_neural:
             self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -67,8 +68,12 @@ class BaseFeatureExtractor(ABC):
 
     def get_features(self, csv, indir, outdir, normalize=False, n=None):
         """Salva le feature su disco o le carica se già disponibili."""
-        # Nome del file basato sul nome della classe e sul parametro di normalizzazione
-        feature_file = os.path.join(outdir, f"{self.name}_features{'_normalized' if normalize else ''}.npz")
+        # Nome del file basato sul nome della classe, sul parametro di normalizzazione e sul nome del csv
+        if self.file_name is not None:
+            feature_file = os.path.join(outdir, self.file_name)
+        else:
+            nome_csv = os.path.basename(csv).split('.')[0]
+            feature_file = os.path.join(outdir, f"{nome_csv}_{self.name}_features{'_normalized' if normalize else ''}.npz")
 
         # Se il file esiste, caricalo
         if os.path.exists(feature_file):
@@ -95,8 +100,8 @@ class BaseFeatureExtractor(ABC):
 class NeuralFeatureExtractor(BaseFeatureExtractor):
     """Implementazione specifica per l'estrazione di feature da reti neurali generiche."""
 
-    def __init__(self, model, target_layer, input_size=(224, 224), device=None, name="neural"):
-        super().__init__(is_neural=True, device=device, name=name)
+    def __init__(self, model, target_layer, input_size=(224, 224), device=None, name="neural", file_name=None):
+        super().__init__(is_neural=True, device=device, name=name, file_name=file_name)
         self.model = self._create_feature_extractor(model, target_layer)
         self.model.to(self.device)
         self.model.eval()
@@ -132,16 +137,16 @@ class NeuralFeatureExtractor(BaseFeatureExtractor):
 class ResNet50FeatureExtractor(NeuralFeatureExtractor):
     """Implementazione specifica per l'estrazione di feature da ResNet50."""
 
-    def __init__(self, weights="IMAGENET1K_V1", device=None, name="resnet50"):
+    def __init__(self, weights="IMAGENET1K_V1", device=None, file_name=None):
         model = resnet50(weights=weights)
-        super().__init__(model=model, target_layer='avgpool', input_size=(224, 224), device=device, name=name)
+        super().__init__(model=model, target_layer='avgpool', input_size=(224, 224), device=device, name="resnet50", file_name=file_name)
 
 
 class TraditionalFeatureExtractor(BaseFeatureExtractor):
     """Implementazione specifica per l'estrazione di feature tradizionali."""
 
-    def __init__(self, name, preprocess_image_func=None):
-        super().__init__(is_neural=False, name=name)
+    def __init__(self, name, preprocess_image_func=None, file_name=None):
+        super().__init__(is_neural=False, name=name, file_name=file_name)
         self._preprocess_image_func = preprocess_image_func
 
     def _preprocess_image(self, image_path):
@@ -157,8 +162,8 @@ class TraditionalFeatureExtractor(BaseFeatureExtractor):
 class RGBMeanFeatureExtractor(TraditionalFeatureExtractor):
     """Feature extractor che calcola i valori medi RGB dalle immagini."""
 
-    def __init__(self, preprocess_image_func=None):
-        super().__init__(name="rgb_mean", preprocess_image_func=preprocess_image_func)
+    def __init__(self, preprocess_image_func=None, file_name=None):
+        super().__init__(name="rgb_mean", preprocess_image_func=preprocess_image_func, file_name=None)
 
     def _extract_features(self, image):
         """Estrae i valori medi RGB dall'immagine."""
@@ -176,8 +181,8 @@ class RGBMeanFeatureExtractor(TraditionalFeatureExtractor):
 class LBPFeatureExtractor(TraditionalFeatureExtractor):
     """Feature extractor che usa Local Binary Patterns."""
 
-    def __init__(self, radius=24, n_points=8, preprocess_image_func=None):
-        super().__init__(name="lbp", preprocess_image_func=preprocess_image_func)
+    def __init__(self, radius=24, n_points=8, preprocess_image_func=None, file_name=None):
+        super().__init__(name="lbp", preprocess_image_func=preprocess_image_func, file_name=file_name)
         self.radius = radius
         self.n_points = n_points
 
@@ -211,8 +216,8 @@ class LBPFeatureExtractor(TraditionalFeatureExtractor):
 class LABFeatureExtractor(TraditionalFeatureExtractor):
     """Feature extractor che usa lo spazio colore LAB."""
 
-    def __init__(self, bins=256, preprocess_image_func=None):
-        super().__init__(name="lab", preprocess_image_func=preprocess_image_func)
+    def __init__(self, bins=256, preprocess_image_func=None, file_name=None):
+        super().__init__(name="lab", preprocess_image_func=preprocess_image_func, file_name=file_name)
         self.bins = bins
 
     def _extract_features(self, image):
