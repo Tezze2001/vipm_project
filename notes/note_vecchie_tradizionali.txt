@@ -1,0 +1,7 @@
+Note vecchie tradizionali
+
+- provare istogrammi e sift bag of words
+	- la media dei canali non aiuta [fatto]
+- segmentazione: concentrarsi sull'area centrale [fatto], canny egde per trovare aree più dense di dettagfli, provare filtra di gabor
+	- morfologia per rifinire
+- provare vari spazi colore [circa fatto]
