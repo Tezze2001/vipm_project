@@ -6,3 +6,4 @@ features_saved/
 .vscode
 .idea
 val_features_resnet50.npz
+features2/
