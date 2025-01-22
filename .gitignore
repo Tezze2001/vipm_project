@@ -7,3 +7,4 @@ features_saved/
 .idea
 val_features_resnet50.npz
 features2/
+val_features_resnet50.npz

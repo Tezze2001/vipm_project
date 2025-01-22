@@ -29,3 +29,19 @@ Steps for each fold:
     - [ ] 5NN relu7 alexnet:
 
 
+
+
+
+# Approaches
+
+2 approaches:
+ 
+- first:
+    - features from ResNET50
+    - compute labels 5NN using as ds small training and qs
+- second:
+    - features from ResNET50
+    - compute unlabelled groups using kmeans
+    - for each group, each element is labelled using 5NN from small training and it votes the label for the group, highest classes vote is the label of the group
+   
+
