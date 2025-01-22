@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import pandas as pd
-from torchvision.models import ResNet50_Weights
 from vipm_features import RGBMeanFeatureExtractor, LBPFeatureExtractor, LABFeatureExtractor, ResNet50FeatureExtractor
 from vipm_dataset_cleaner import DatasetCleaner  # Assumendo che il cleaner sia salvato in un modulo separato
 
@@ -55,9 +54,7 @@ cleaner = DatasetCleaner(features=combined_features, class_info=labels, clean_cr
 # Pulisci il dataset globalmente
 accepted_indices_global = cleaner.clean_dataset_global(contamination=0.1)
 print(f"\nImmagini accettate globalmente: {len(accepted_indices_global)} su {len(labels)}")
-
-# Pulisci il dataset per classe
-accepted_indices_by_class = cleaner.clean_dataset_by_class(contamination=0.1)
-print(f"Immagini accettate per classe: {len(accepted_indices_by_class)} su {len(labels)}")
+print(f"Indici accettati: {accepted_indices_global}")
+print(f"Rifuati: {list(set(range(len(labels))) - set(accepted_indices_global))}")
 
 print("\nTesting del cleaner completato.")
