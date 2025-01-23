@@ -67,19 +67,19 @@ device = (
 
 print(f"Using {device} device")
 
-training_set = FeatureDataset('./dataset/features_extended_10.npz',
+training_set = FeatureDataset('../dataset/features_extended_20.npz',
                               type='train',
                               target_transform=lambda y: F.one_hot(y, num_classes=num_classes))
 
-validation_set = FeatureDataset('./dataset/features_extended_10.npz',
+validation_set = FeatureDataset('../dataset/features_extended_20.npz',
                                 type='val',
                                 target_transform=lambda y: F.one_hot(y, num_classes=num_classes))
 
-test_set = FeatureDataset('./dataset/test_features_resnet50.npz',
+test_set = FeatureDataset('../dataset/test_features_resnet50.npz',
                           type='test',
                           target_transform=lambda y: F.one_hot(y, num_classes=num_classes))
 
-test_set_degraded = FeatureDataset('./dataset/test_degraded_features_resnet50.npz',
+test_set_degraded = FeatureDataset('../dataset/test_degraded_features_resnet50.npz',
                                 type='test',
                                 target_transform=lambda y: F.one_hot(y, num_classes=num_classes))
 
