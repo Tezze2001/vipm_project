@@ -20,7 +20,6 @@ os.makedirs(outdir, exist_ok=True)
 
 # Carica le immagini dal CSV
 image_names, labels = load_csv(csv_path)
-
 image_names_unlabeled, _ = load_csv(csv_unlabeled)
 
 extractor = ResNet50FeatureExtractor()

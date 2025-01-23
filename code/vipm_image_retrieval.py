@@ -57,6 +57,7 @@ class ImageRetrievalBestFit(ImageRetrieval):
             # stampa senza andare a capo per mostrare la classe target
             print(f"Classe target: {target_class}", end='\r')
             target_data = self.queryset[self.queryset_labels == target_class]
+            print (target_data)
             
             # Standardizzazione dei dati se richiesto
             dataset_to_use = self.dataset
