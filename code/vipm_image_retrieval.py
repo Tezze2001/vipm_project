@@ -12,7 +12,7 @@ class ImageRetrieval(ABC):
         self.dataset_label = dataset_label
         self.queryset = queryset
         
-    def retrive_images():
+    def retrieve_images(self):
         pass
 
 class ImageRetrievalKNNCentroids(ImageRetrieval):
@@ -33,7 +33,7 @@ class ImageRetrievalKNNCentroids(ImageRetrieval):
         
         return np.array(centroids)
 
-    def retrive_images(self):
+    def retrieve_images(self):
         if self.computes_centroid:
             db = self.compute_centroids()
         else:
@@ -67,7 +67,7 @@ class ImageRetrievalKNN(ImageRetrieval):
         self.standardize = standardize
         self.weights = weights
         
-    def retrive_images(self):
+    def retrieve_images(self):
         std_pipeline = Pipeline([
             ('scaler', StandardScaler()),            
             ('knn', KNeighborsClassifier(n_neighbors=self.n_neighbors, weights=self.weights))
@@ -95,7 +95,7 @@ class ImageRetrievalBestFit(ImageRetrieval):
         self.standardize = standardize
         self.distance_metric = distance_metric
         
-    def retrive_images(self):
+    def retrieve_images(self):
         # Filtra i dati del queryset per la classe target
         indices = []
         labels = []

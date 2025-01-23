@@ -1,4 +1,24 @@
+import torch
 import torch.nn as nn
+
+class ModelOptions:
+    def __init__(self, criterion: torch.nn, optimizer: torch.optim, scheduler: torch.optim, input_dim = 2048, num_classes = 251, batch_size = 2048, epochs = 100, learning_rate = 0.01, patience = 10):
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.input_dim = input_dim
+        self.num_classes = num_classes
+        self.batch_size = batch_size 
+        self.epochs = epochs
+        self.learning_rate = learning_rate
+        self.patience = patience
+        self.scheduler = scheduler
+        self.device = (
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps"
+            if torch.backends.mps.is_available()
+            else "cpu"
+        )
 
 # Definizione del modello
 class OneLayerNetwork(nn.Module):
