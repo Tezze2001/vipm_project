@@ -9,29 +9,24 @@ import pandas as pd
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 from torchvision.models import ResNet50_Weights
-from dataset import CustomDataset
-from torchvision import transforms
-from utility import test_validate, train, validate
+from dataset import AugmentedDataset
+from utility import test_validate, train, validate, create_labels_dict
 
 # Percorsi dei file
-csv_tr = './dataset/train_small.csv'
-csv_te = './dataset/val_info.csv'
-indir_tr = './dataset/train_set'
-indir_te = './dataset/val_set'
+csv_tr = '../dataset/train_small.csv'
+csv_te = '../dataset/val_info.csv'
+indir_tr = '../dataset/augmented_train_set'
+indir_te = '../dataset/val_set'
 
 # Caricamento dei dati dal CSV (Training)
 data_tr = pd.read_csv(csv_tr, header=None, names=['image', 'label'])
 image_names_tr = data_tr['image'].tolist()
-labels_tr = data_tr['label'].values
+labels_dict_tr = create_labels_dict(data_tr)
 
 # Caricamento dei dati dal CSV (Validation)
 data_te = pd.read_csv(csv_te, header=None, names=['image', 'label'])
 image_names_te = data_te['image'].tolist()
-labels_te = data_te['label'].values
-
-custom_transforms = [
-    transforms.Lambda(lambda x: x + torch.randn_like(x) * 0.2)  # Rumore gaussiano
-]
+labels_dict_te = create_labels_dict(data_te)
 
 num_classes = 251
 batch_size = 32
@@ -39,8 +34,8 @@ learning_rate = 1e-3
 epochs = 10
 
 # Creazione dei dataset
-train_dataset = CustomDataset(image_names_tr, labels_tr, indir_tr, num_classes=num_classes, augment=True)
-test_dataset = CustomDataset(image_names_te, labels_te, indir_te, num_classes=num_classes, augment=False)
+train_dataset = AugmentedDataset(labels_dict_tr, indir_tr, num_classes=num_classes, augment=True)
+test_dataset = AugmentedDataset(labels_dict_te, indir_te, num_classes=num_classes, augment=False)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -131,7 +126,7 @@ plt.legend()
 plt.tight_layout()
 plt.savefig('training_validation_metrics_fine_tuning.png')
 
-# Fase di test
+# Fase di test pulito 
 test_loss, test_accuracy_top1, test_accuracy_top5, y_test_pred, y_test_true = test_validate(model, test_loader, criterion, device)
 
 print("\nRisultati sul Test Set:")

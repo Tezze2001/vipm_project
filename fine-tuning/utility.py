@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import os
 
 # Funzione di addestramento
 def train(model, train_loader, criterion, optimizer, device):
@@ -89,3 +90,14 @@ def test_validate(model, val_loader, criterion, device):
     top1_accuracy = correct_top1 / total
     top5_accuracy = correct_top5 / total
     return running_loss / len(val_loader), top1_accuracy, top5_accuracy, np.array(all_preds), np.array(all_labels)
+
+
+# Funzione per creare il labels_dict da un DataFrame
+def create_labels_dict(data):
+    labels_dict = {}
+    for _, row in data.iterrows():
+        # Estrai l'id dal nome dell'immagine (esempio: train_059371_noisy.jpg -> 059371)
+        image_name = os.path.splitext(row['image'])[0]
+        image_id = image_name.split('_')[1]  # Prendi la seconda parte del nome diviso da "_"
+        labels_dict[image_id] = row['label']
+    return labels_dict
