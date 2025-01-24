@@ -13,10 +13,11 @@ from dataset import AugmentedDataset
 from utility import test_validate, train, validate, create_labels_dict
 
 # Percorsi dei file
-csv_tr = '../dataset/train_small.csv'
-csv_te = '../dataset/val_info.csv'
-indir_tr = '../dataset/augmented_train_set'
-indir_te = '../dataset/val_set'
+csv_tr = './dataset/train_small.csv'
+csv_te = './dataset/val_info.csv'
+indir_tr = './dataset/augmented_train_set'  
+indir_te = './dataset/val_set'
+indir_degraded = './dataset/val_set_degraded'
 
 # Caricamento dei dati dal CSV (Training)
 data_tr = pd.read_csv(csv_tr, header=None, names=['image', 'label'])
@@ -28,6 +29,10 @@ data_te = pd.read_csv(csv_te, header=None, names=['image', 'label'])
 image_names_te = data_te['image'].tolist()
 labels_dict_te = create_labels_dict(data_te)
 
+# Caricamento dei dati dal CSV (Degraded Validation)
+data_degraded = pd.read_csv(csv_te, header=None, names=['image', 'label'])
+image_names_degraded = data_degraded['image'].tolist()
+
 num_classes = 251
 batch_size = 32
 learning_rate = 1e-3
@@ -36,6 +41,7 @@ epochs = 10
 # Creazione dei dataset
 train_dataset = AugmentedDataset(labels_dict_tr, indir_tr, num_classes=num_classes, augment=True)
 test_dataset = AugmentedDataset(labels_dict_te, indir_te, num_classes=num_classes, augment=False)
+test_degraded_dataset = AugmentedDataset(labels_dict_te, indir_degraded, num_classes=num_classes, augment=False)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -48,6 +54,7 @@ train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+test_degraded_loader = DataLoader(test_degraded_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
 # Caricamento modello ResNet50
 weights = ResNet50_Weights.DEFAULT
@@ -129,8 +136,37 @@ plt.savefig('training_validation_metrics_fine_tuning.png')
 # Fase di test pulito 
 test_loss, test_accuracy_top1, test_accuracy_top5, y_test_pred, y_test_true = test_validate(model, test_loader, criterion, device)
 
-print("\nRisultati sul Test Set:")
+print("\nRisultati sul Test Set Pulito:")
 print(f"  Test Loss: {test_loss:.4f}, Test Accuracy top1: {test_accuracy_top1 * 100:.2f}%, Test Accuracy top5: {test_accuracy_top5 * 100:.2f}%")
+
+# Matrice di confusione per il test set
+y_test_pred_classes = y_test_pred
+y_test_true_classes = np.argmax(y_test_true, axis=1)
+conf_matrix = confusion_matrix(y_test_true_classes, y_test_pred_classes)
+
+# Visualizzazione matrice di confusione
+plt.figure(figsize=(16, 10))
+sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="YlGnBu",
+            cbar_kws={'label': 'Numero di Campioni'}, annot_kws={"size": 10})
+plt.title(f"Matrice di Confusione - Accuratezza Test: {test_accuracy_top1 * 100:.2f}%")
+plt.xlabel('Predicted Labels', fontsize=12)
+plt.ylabel('True Labels', fontsize=12)
+plt.xticks(rotation=45, ha="right", fontsize=10)
+plt.yticks(rotation=0, fontsize=10)
+plt.savefig('confusion_matrix_test_resnet50_nn_pytorch.png')
+# plt.show()
+
+# Accuratezza per classe per il test set
+class_accuracies = conf_matrix.diagonal() / conf_matrix.sum(axis=1)
+print("\nAccuratezza per Classe sul Test Set:")
+for i, acc in enumerate(class_accuracies):
+    print(f"  Classe {i}: Accuratezza = {acc * 100:.2f}%")
+
+# Fase di test su immagini degradate
+test_loss, test_accuracy_top1, test_accuracy_top5, y_test_pred, y_test_true = test_validate(model, test_degraded_loader, criterion, device)
+
+print("\nRisultati sul Test Set degradato:")
+print(f"  Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy_top1 * 100:.2f}%, Test Accuracy top5: {test_accuracy_top5 * 100:.2f}%")
 
 # Matrice di confusione per il test set
 y_test_pred_classes = y_test_pred

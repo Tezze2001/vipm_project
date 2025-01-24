@@ -6,7 +6,7 @@ import numpy as np
 
 
 # Carica l'immagine originale
-image_path = "dataset/val_set/val_000036.jpg"
+image_path = "dataset/train_set/train_000004.jpg"
 image = Image.open(image_path).convert("RGB")
 
 # Normalizza e aggiunge rumore gaussiano

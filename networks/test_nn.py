@@ -53,7 +53,7 @@ val_dataset = TensorDataset(X_val, y_val)
 # Parametri
 input_dim = 2048  # Dimensione dell'input
 num_classes = 251  # Numero di classi
-batch_size = 2048  # 32
+batch_size = 2048  
 epochs = 100
 learning_rate = 0.01
 
@@ -156,10 +156,10 @@ plt.legend()
 plt.tight_layout()
 plt.savefig('training_validation_metrics.png')
 
-# Fase di test
+# Fase di test pulito
 test_loss, test_accuracy_top1, test_accuracy_top5, y_test_pred, y_test_true = test_validate(model, test_loader, criterion, device)
 
-print("\nRisultati sul Test Set:")
+print("\nRisultati sul Test Set pulito:")
 print(f"  Test Loss: {test_loss:.4f}, Test Accuracy top1: {test_accuracy_top1 * 100:.2f}%, Test Accuracy top5: {test_accuracy_top5 * 100:.2f}%")
 
 # Matrice di confusione per il test set
@@ -189,7 +189,7 @@ for i, acc in enumerate(class_accuracies):
 # Fase di test su immagini degradate
 test_loss, test_accuracy_top1, test_accuracy_top5, y_test_pred, y_test_true = test_validate(model, test_degraded_loader, criterion, device)
 
-print("\nRisultati sul Test Set:")
+print("\nRisultati sul Test Set degradato:")
 print(f"  Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy_top1 * 100:.2f}%, Test Accuracy top5: {test_accuracy_top5 * 100:.2f}%")
 
 # Matrice di confusione per il test set

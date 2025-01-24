@@ -70,7 +70,7 @@ def apply_transformations_and_save(csv_path, input_dir, output_dir, seed=None):
 
 
 # Percorsi delle directory
-input_dir = "dataset/train_set"
+input_dir = "dataset//train_set"
 csv_tr = './dataset/train_small.csv'
 output_dir = "dataset/augmented_train_set"
 
