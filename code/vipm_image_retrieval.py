@@ -7,17 +7,17 @@ from scipy.spatial.distance import cdist
 from sklearn.neighbors import NearestNeighbors
 
 class ImageRetrieval(ABC):
-    def __init__(self, dataset, dataset_label, queryset):
+    def __init__(self, dataset, dataset_labels, queryset):
         self.dataset = dataset
-        self.dataset_label = dataset_label
+        self.dataset_labels = dataset_labels
         self.queryset = queryset
         
     def retrive_images():
         pass
 
 class ImageRetrievalKNNCentroids(ImageRetrieval):
-    def __init__(self, dataset, dataset_label, queryset, algo = 'ball_tree', computes_centroid = True, standardize = True, n_image_per_class=5, weights='uniform'):
-        super().__init__(dataset, dataset_label, queryset)
+    def __init__(self, dataset, dataset_labels, queryset, algo = 'ball_tree', computes_centroid = True, standardize = True, n_image_per_class=5, weights='uniform'):
+        super().__init__(dataset, dataset_labels, queryset)
         self.n_image_per_class = n_image_per_class
         self.standardize = standardize
         self.weights = weights
@@ -27,8 +27,8 @@ class ImageRetrievalKNNCentroids(ImageRetrieval):
     def compute_centroids(self):
         centroids = []  
 
-        for i in range(251):
-            centroid = self.dataset[i*20:i*20 + 20, :].mean(axis=0)
+        for target_class in np.unique(self.dataset_labels):
+            centroid = self.dataset[self.dataset_labels == target_class].mean(axis=0)
             centroids.append(centroid) 
         
         return np.array(centroids)
@@ -78,10 +78,10 @@ class ImageRetrievalKNN(ImageRetrieval):
         ])
 
         if self.standardize:
-            std_pipeline.fit(self.dataset, self.dataset_label)
+            std_pipeline.fit(self.dataset, self.dataset_labels)
             predictions = std_pipeline.predict(self.queryset)
         else:
-            pipeline.fit(self.dataset, self.dataset_label)
+            pipeline.fit(self.dataset, self.dataset_labels)
             predictions = pipeline.predict(self.queryset)
             
         # ritorna gli indici da considerare e le loro labels
@@ -89,32 +89,31 @@ class ImageRetrievalKNN(ImageRetrieval):
     
     
 class ImageRetrievalBestFit(ImageRetrieval):
-    def __init__(self, dataset, queryset, queryset_labels, standardize=True, n_neighbors=5, distance_metric='euclidean'):
-        super().__init__(dataset, queryset, queryset_labels)
+    def __init__(self, dataset, dataset_labels, queryset, standardize=True, n_neighbors=5, distance_metric='euclidean'):
+        super().__init__(dataset, dataset_labels, queryset)
         self.n_neighbors = n_neighbors
         self.standardize = standardize
         self.distance_metric = distance_metric
         
     def retrive_images(self):
-        # Filtra i dati del queryset per la classe target
+        # Filtra i dati del dataset per la classe target
         indices = []
         labels = []
-        for target_class in np.unique(self.queryset_labels):
+        for target_class in np.unique(self.dataset_labels):
             # stampa senza andare a capo per mostrare la classe target
             print(f"Classe target: {target_class}", end='\r')
-            target_data = self.queryset[self.queryset_labels == target_class]
-            print (target_data)
+            target_data = self.dataset[self.dataset_labels == target_class]
             
             # Standardizzazione dei dati se richiesto
-            dataset_to_use = self.dataset
-            queryset_to_use = target_data
+            queryset_to_use = self.queryset
+            dataset_to_use = target_data
             if self.standardize:
                 scaler = StandardScaler()
-                dataset_to_use = scaler.fit_transform(self.dataset)
-                queryset_to_use = scaler.transform(target_data)
+                queryset_to_use = scaler.fit_transform(self.queryset)
+                dataset_to_use = scaler.transform(target_data)
             
-            # Calcola le distanze tra il dataset e il queryset della classe target
-            distances = cdist(dataset_to_use, queryset_to_use, metric=self.distance_metric)
+            # Calcola le distanze tra il queryset e il dataset della classe target
+            distances = cdist(queryset_to_use, dataset_to_use, metric=self.distance_metric)
             
             # Trova gli n_neighbors più vicini
             nearest_indices = np.argsort(np.min(distances, axis=1))[:self.n_neighbors]
