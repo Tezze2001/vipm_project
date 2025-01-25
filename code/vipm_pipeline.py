@@ -4,8 +4,13 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 import torch
+import os
+import sys
 
-from networks.models import ModelOptions
+project_path = os.path.abspath("../networks")  # Adatta il percorso a dove si trova il tuo progetto
+sys.path.append(project_path)
+
+from models import ModelOptions
 from vipm_dataset_cleaner import DatasetCleaner
 from vipm_image_retrieval import ImageRetrieval
 from vipm_features import BaseFeatureExtractor
@@ -27,9 +32,10 @@ class FeatureExtractor(Transformer):
     def __init__(self, extractor: BaseFeatureExtractor):
         super().__init__()
         self.extractor = extractor
+        self.name = self.extractor.name
 
     def transform(self, **kwargs):
-        return self.extractor.get_features(**kwargs)
+        return self.extractor.get_features(csv=kwargs['csv'], indir=kwargs['indir'], outdir=kwargs['outdir'], normalize=kwargs['normalize'])
     
 class Retrieval(Transformer):
     def __init__(self, retrieval_method: ImageRetrieval):
@@ -77,7 +83,8 @@ class KNN(Model):
         super().__init__()
         self.n_neighbors = n_neighbors
         self.weights = weights
-        if standardize:
+        self.standardize = standardize
+        if self.standardize:
             self.pipeline = Pipeline([
                 ('scaler', StandardScaler()),              # Standardization step
                 ('knn', KNeighborsClassifier(n_neighbors=n_neighbors, weights=self.weights)) 
@@ -99,7 +106,10 @@ class NeuralNetwork(Model):
         super().__init__()
         self.model = model
         self.model_options = model_options
+        self.model.to(self.model_options.device)
         self.log = log 
+        self.best_model_state = type(self.model)(input_dim = self.model_options.input_dim, num_classes = self.model_options.num_classes)
+        self.best_model_state.to(self.model_options.device)
 
     def __train(self, train_loader):
         self.model.train()
@@ -123,8 +133,8 @@ class NeuralNetwork(Model):
         accuracy = correct / total
         return running_loss / len(train_loader), accuracy
 
-    def __evaluate(self, model, val_loader):
-        model.eval()
+    def __evaluate(self, val_loader):
+        self.best_model_state.eval()
         running_loss = 0.0
         correct = 0
         total = 0
@@ -134,7 +144,7 @@ class NeuralNetwork(Model):
             for X_batch, y_batch in val_loader:
                 X_batch, y_batch = X_batch.to(self.model_options.device), y_batch.to(self.model_options.device).float()
 
-                outputs = model(X_batch)
+                outputs = self.best_model_state(X_batch)
 
                 loss = self.model_options.criterion(outputs, y_batch)
                 running_loss += loss.item()
@@ -161,7 +171,7 @@ class NeuralNetwork(Model):
         for epoch in range(self.model_options.epochs):
             train_loss, train_accuracy = self.__train(train_loader)
             if val_loader != None:
-                val_loss, val_accuracy, y_pred, y_true = self.__evaluate(self.model, val_loader)
+                val_loss, val_accuracy, y_pred, y_true = self.__evaluate(val_loader)
                 val_losses.append(val_loss)
                 val_accuracies.append(val_accuracy)
 
@@ -172,15 +182,21 @@ class NeuralNetwork(Model):
             if self.log:
                 print(f"Epoch {epoch + 1}/{self.model_options.epochs}:")
                 print(f"  Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy * 100:.2f}%")
-                print(f"  Val Loss: {val_losses[-1]:.4f}, Val Accuracy: {val_accuracies[-1] * 100:.2f}%")
+                if val_loader != None:
+                    print(f"  Val Loss: {val_losses[-1]:.4f}, Val Accuracy: {val_accuracies[-1] * 100:.2f}%")
 
             # Early stopping
-            if val_losses[-1] < best_val_loss:
-                best_val_loss = val_loss
-                early_stop_counter = 0
-                self.best_model_state = self.model.state_dict()
+            
+            if val_loader != None:
+                if val_losses[-1] < best_val_loss:
+                    best_val_loss = val_loss
+                    early_stop_counter = 0
+                    self.best_model_state.load_state_dict(self.model.state_dict())
+                else:
+                    early_stop_counter += 1
             else:
-                early_stop_counter += 1
+                self.best_model_state.load_state_dict(self.model.state_dict())
+
 
             if early_stop_counter >= self.model_options.patience:
                 print("\nEarly stopping triggered. Stopping training.")
@@ -189,17 +205,19 @@ class NeuralNetwork(Model):
             # Scheduler step
             self.model_options.scheduler.step()
 
+        return train_losses, val_losses, train_accuracies, val_accuracies
+
     def predict(self, test_loader):
-        return self.__evaluate(self.best_model_state, test_loader)
+        mean_loss, accuracy, y_pred, y_test_hot_encoded = self.__evaluate(test_loader)
+
+        y_test = np.argmax(y_test_hot_encoded, axis=1)
+
+        return mean_loss, accuracy, y_pred, y_test
     
 
 class Pipeline:
-    def __init__(self, cleaner: Cleaner = None, extractor: FeatureExtractor = None, retrieval: ImageRetrieval = None, splitter: Splitter = None, classifier: Model = None):
-        self.cleaner = cleaner
-        self.extractor = extractor
-        self.retrieval = retrieval
-        self.splitter = splitter
-        self.classifier = classifier
+    def __init__(self, pipeline):
+        self.pipeline = pipeline
 
     def start():
         pass
