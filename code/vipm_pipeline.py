@@ -214,10 +214,12 @@ class NeuralNetwork(Model):
 
         return mean_loss, accuracy, y_pred, y_test
     
-
+"""
 class Pipeline:
     def __init__(self, pipeline):
         self.pipeline = pipeline
 
     def start():
         pass
+        
+"""
