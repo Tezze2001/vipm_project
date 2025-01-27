@@ -100,6 +100,9 @@ class KNN(Model):
     def predict(self, X):
         return self.pipeline.predict(X)
     
+    def predict_proba(self, X):
+        return self.pipeline.predict_proba(X)
+    
 
 class NeuralNetwork(Model):
     def __init__(self, model: torch.nn.Module, model_options: ModelOptions, log=True):
@@ -159,6 +162,51 @@ class NeuralNetwork(Model):
         accuracy = correct / total
         return running_loss / len(val_loader), accuracy, np.array(all_preds), np.array(all_labels)
     
+    def __test_evaluate(self, test_loader):
+        self.best_model_state.eval()
+        running_loss = 0.0
+        correct_top1 = 0
+        correct_top5 = 0
+        correct_top10 = 0
+        total = 0
+        all_preds = []
+        all_labels = []
+        with torch.no_grad():
+            for X_batch, y_batch in test_loader:
+                X_batch, y_batch = X_batch.to(self.model_options.device), y_batch.to(self.model_options.device).float()
+
+                outputs = self.best_model_state(X_batch)
+
+                loss = self.model_options.criterion(outputs, y_batch)
+                running_loss += loss.item()
+
+                # Top-1 predictions
+                predicted_top1 = outputs.argmax(dim=1)
+
+                # Top-5 predictions
+                _, predicted_top5 = outputs.topk(5, dim=1)
+
+                # Top-10 predictions
+                _, predicted_top10 = outputs.topk(10, dim=1)
+
+                total += y_batch.size(0)
+                correct_top1 += (predicted_top1 == y_batch.argmax(dim=1)).sum().item()
+
+                # Check if true labels are in the top-5 predictions
+                true_labels = y_batch.argmax(dim=1, keepdim=True)
+                correct_top5 += (predicted_top5 == true_labels).sum().item()
+
+                # Check if true labels are in the top-10 predictions
+                correct_top10 += (predicted_top10 == true_labels).sum().item()
+
+                all_preds.extend(predicted_top1.cpu().numpy())
+                all_labels.extend(y_batch.cpu().numpy())
+
+        top1_accuracy = correct_top1 / total
+        top5_accuracy = correct_top5 / total
+        top10_accuracy = correct_top10 / total
+        return running_loss / len(test_loader), top1_accuracy, top5_accuracy, top10_accuracy, np.array(all_preds), np.array(all_labels)
+    
     def fit(self, train_loader, val_loader):
         best_val_loss = float('inf')
         early_stop_counter = 0
@@ -208,11 +256,11 @@ class NeuralNetwork(Model):
         return train_losses, val_losses, train_accuracies, val_accuracies
 
     def predict(self, test_loader):
-        mean_loss, accuracy, y_pred, y_test_hot_encoded = self.__evaluate(test_loader)
+        mean_loss, top1_accuracy, top5_accuracy, top10_accuracy, y_pred_top1, y_test_hot_encoded = self.__test_evaluate(test_loader)
 
         y_test = np.argmax(y_test_hot_encoded, axis=1)
 
-        return mean_loss, accuracy, y_pred, y_test
+        return mean_loss, top1_accuracy, top5_accuracy, top10_accuracy, y_pred_top1, y_test
     
 """
 class Pipeline:
