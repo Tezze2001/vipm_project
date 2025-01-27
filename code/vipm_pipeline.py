@@ -194,10 +194,10 @@ class NeuralNetwork(Model):
 
                 # Check if true labels are in the top-5 predictions
                 true_labels = y_batch
-                correct_top5 += (predicted_top5 == true_labels).sum().item()
+                correct_top5 += sum([1 if label in predicted_top5[i] else 0 for i, label in enumerate(true_labels)])
 
                 # Check if true labels are in the top-10 predictions
-                correct_top10 += (predicted_top10 == true_labels).sum().item()
+                correct_top10 += sum([1 if label in predicted_top10[i] else 0 for i, label in enumerate(true_labels)])
 
                 all_preds.extend(predicted_top1.cpu().numpy())
                 all_labels.extend(y_batch.cpu().numpy())
@@ -206,6 +206,7 @@ class NeuralNetwork(Model):
         top5_accuracy = correct_top5 / total
         top10_accuracy = correct_top10 / total
         return running_loss / len(test_loader), top1_accuracy, top5_accuracy, top10_accuracy, np.array(all_preds), np.array(all_labels)
+
     
     def fit(self, train_loader, val_loader):
         best_val_loss = float('inf')
@@ -258,7 +259,7 @@ class NeuralNetwork(Model):
     def predict(self, test_loader):
         mean_loss, top1_accuracy, top5_accuracy, top10_accuracy, y_pred_top1, y_test_hot_encoded = self.__test_evaluate(test_loader)
 
-        y_test = np.argmax(y_test_hot_encoded, axis=1)
+        y_test = np.argmax(y_test_hot_encoded)
 
         return mean_loss, top1_accuracy, top5_accuracy, top10_accuracy, y_pred_top1, y_test
     
