@@ -120,7 +120,7 @@ class NeuralNetwork(Model):
         correct = 0
         total = 0
         for X_batch, y_batch in train_loader:
-            X_batch, y_batch = X_batch.to(self.model_options.device), y_batch.to(self.model_options.device).float()
+            X_batch, y_batch = X_batch.to(self.model_options.device), y_batch.to(self.model_options.device).long()
             self.model_options.optimizer.zero_grad()
             outputs = self.model(X_batch)
                 
@@ -131,7 +131,7 @@ class NeuralNetwork(Model):
             running_loss += loss.item()
             predicted = outputs.argmax(dim=1)
             total += y_batch.size(0)
-            correct += (predicted == y_batch.argmax(dim=1)).sum().item()
+            correct += (predicted == y_batch).sum().item()
 
         accuracy = correct / total
         return running_loss / len(train_loader), accuracy
@@ -145,7 +145,7 @@ class NeuralNetwork(Model):
         all_labels = []
         with torch.no_grad():
             for X_batch, y_batch in val_loader:
-                X_batch, y_batch = X_batch.to(self.model_options.device), y_batch.to(self.model_options.device).float()
+                X_batch, y_batch = X_batch.to(self.model_options.device), y_batch.to(self.model_options.device).long()
 
                 outputs = self.best_model_state(X_batch)
 
@@ -154,7 +154,7 @@ class NeuralNetwork(Model):
 
                 predicted = outputs.argmax(dim=1)
                 total += y_batch.size(0)
-                correct += (predicted == y_batch.argmax(dim=1)).sum().item()
+                correct += (predicted == y_batch).sum().item()
 
                 all_preds.extend(predicted.cpu().numpy())
                 all_labels.extend(y_batch.cpu().numpy())
@@ -173,7 +173,7 @@ class NeuralNetwork(Model):
         all_labels = []
         with torch.no_grad():
             for X_batch, y_batch in test_loader:
-                X_batch, y_batch = X_batch.to(self.model_options.device), y_batch.to(self.model_options.device).float()
+                X_batch, y_batch = X_batch.to(self.model_options.device), y_batch.to(self.model_options.device).long()
 
                 outputs = self.best_model_state(X_batch)
 
@@ -190,10 +190,10 @@ class NeuralNetwork(Model):
                 _, predicted_top10 = outputs.topk(10, dim=1)
 
                 total += y_batch.size(0)
-                correct_top1 += (predicted_top1 == y_batch.argmax(dim=1)).sum().item()
+                correct_top1 += (predicted_top1 == y_batch).sum().item()
 
                 # Check if true labels are in the top-5 predictions
-                true_labels = y_batch.argmax(dim=1, keepdim=True)
+                true_labels = y_batch
                 correct_top5 += (predicted_top5 == true_labels).sum().item()
 
                 # Check if true labels are in the top-10 predictions
