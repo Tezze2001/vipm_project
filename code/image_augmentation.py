@@ -11,9 +11,7 @@ def create_directory(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-
-# Funzione per applicare trasformazioni e salvare immagini
-def apply_transformations_and_save(csv_path, input_dir, output_dir, sample_percentage=100, seed=None):
+def apply_transformations_and_save(csv_path, input_dir, output_dir, output_csv, sample_percentage=100, seed=None, percentage=0.7):
     # Imposta il seed per la riproducibilità
     if seed is not None:
         random.seed(seed)
@@ -38,9 +36,13 @@ def apply_transformations_and_save(csv_path, input_dir, output_dir, sample_perce
     # Crea directory di output
     create_directory(output_dir)
 
+    # Prepara una lista per raccogliere i dati del nuovo CSV
+    transformed_data = []
+
     # Scansiona tutte le immagini specificate nel CSV
     for _, row in data.iterrows():
         filename = row['image']
+        label = row['label']
         input_path = os.path.join(input_dir, filename)
 
         if not os.path.exists(input_path):
@@ -55,17 +57,20 @@ def apply_transformations_and_save(csv_path, input_dir, output_dir, sample_perce
         original_path = os.path.join(output_dir, f"{base_filename}_original{ext}")
         image.save(original_path)
 
+        # Aggiungi al nuovo CSV l'immagine originale
+        transformed_data.append([f"{base_filename}_original{ext}", label])
+
         # Se l'immagine è nel campione, applica le trasformazioni
         if filename in sampled_data['image'].values:
             transformations = []
-            if random.random() > 0.70:  
+            if random.random() > percentage:  
                 noisy_image = transform_noise(image)
                 transformations.append(("noisy", noisy_image))
-            if random.random() > 0.70: 
+            if random.random() > percentage: 
                 bilateral_size = random.choice([3, 5, 7])  # Scelta casuale della dimensione del filtro
                 bilateral_filtered_image = image.filter(ImageFilter.ModeFilter(size=bilateral_size))
                 transformations.append(("bilateral", bilateral_filtered_image))
-            if random.random() > 0.70: 
+            if random.random() > percentage: 
                 gaussian_radius = random.uniform(1, 3)  # Scelta casuale del raggio (tra 1 e 3)
                 gaussian_filtered_image = image.filter(ImageFilter.GaussianBlur(radius=gaussian_radius))
                 transformations.append(("gaussian", gaussian_filtered_image))
@@ -75,16 +80,34 @@ def apply_transformations_and_save(csv_path, input_dir, output_dir, sample_perce
                 transformed_path = os.path.join(output_dir, f"{base_filename}_{name}{ext}")
                 transformed_image.save(transformed_path)
 
+                # Aggiungi al nuovo CSV l'immagine trasformata
+                transformed_data.append([f"{base_filename}_{name}{ext}", label])
+
+    # Salva il nuovo CSV con i dettagli delle immagini trasformate
+    transformed_df = pd.DataFrame(transformed_data, columns=['image', 'label'])
+    transformed_df.to_csv(output_csv, index=False)
+
 
 # Percorsi delle directory
-input_dir = "dataset//train_set"
-csv_tr = './dataset/train_small.csv'
-output_dir = "dataset/augmented_train_set_test2"
+input_dir = "../dataset/filtered_small_with_cleaned_retrieval"
+csv_tr = '../dataset/filtered_small_with_cleaned_retrieval_labels.csv'
 
-# Crea la directory di output
+
+
+percentage = 0.7
+output_dir = f"dataset//filtered_small_with_cleaned_retrieval_augmented_{int(percentage * 100)}"
+output_csv = f"dataset//filtered_small_with_cleaned_retrieval_augmented_{int(percentage * 100)}_labels.csv"
 create_directory(output_dir)
+apply_transformations_and_save(csv_tr, input_dir, output_dir, output_csv, sample_percentage=100, seed=42, percentage=percentage)
 
-# Applica le trasformazioni e salva le immagini con seed
-apply_transformations_and_save(csv_tr, input_dir, output_dir, sample_percentage=50, seed=42)
+percentage = 0.8
+output_dir = f"dataset//filtered_small_with_cleaned_retrieval_augmented_{int(percentage * 100)}"
+output_csv = f"dataset//filtered_small_with_cleaned_retrieval_augmented_{int(percentage * 100)}_labels.csv"
+create_directory(output_dir)
+apply_transformations_and_save(csv_tr, input_dir, output_dir, output_csv, sample_percentage=100, seed=42, percentage=percentage)
 
-print("Trasformazioni completate e immagini salvate.")
+percentage = 0.9
+output_dir = f"dataset//filtered_small_with_cleaned_retrieval_augmented_{int(percentage * 100)}"
+output_csv = f"dataset//filtered_small_with_cleaned_retrieval_augmented_{int(percentage * 100)}_labels.csv"
+create_directory(output_dir)
+apply_transformations_and_save(csv_tr, input_dir, output_dir, output_csv, sample_percentage=100, seed=42, percentage=percentage)
