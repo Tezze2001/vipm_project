@@ -1,0 +1,3 @@
+Model,K,Accuracy,Top-5 Accuracy
+Test Set (only on small),200,0.014840753710188427,0.05727863931965983
+Test Set Degraded (only on small),200,0.014840753710188427,0.04977488744372186
