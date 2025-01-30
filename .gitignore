@@ -8,4 +8,3 @@ features_saved/
 val_features_resnet50.npz
 features/
 val_features_resnet50.npz
-notebook/image_retrival_KNN.ipynb

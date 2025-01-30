@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from vipm_features import RGBMeanFeatureExtractor, LBPFeatureExtractor, LABFeatureExtractor, ResNet50FeatureExtractor
-from vipm_dataset_cleaner import DatasetCleaner  # Assumendo che il cleaner sia salvato in un modulo separato
+from vipm_dataset_cleaner import DatasetCleaner 
 
 # Carica il file CSV
 def load_csv(csv_path):
@@ -11,8 +11,8 @@ def load_csv(csv_path):
 
 # Percorsi
 csv_path = '../dataset/train_small.csv'   
-indir = '../dataset/train_set'  # Modifica in base alla posizione delle immagini
-outdir = '../features'  # Modifica in base alla posizione delle feature
+indir = '../dataset/train_set' 
+outdir = '../features'
 os.makedirs(outdir, exist_ok=True)
 
 # Inizializza gli estrattori di feature
