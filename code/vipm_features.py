@@ -94,6 +94,13 @@ class BaseFeatureExtractor(ABC):
             np.savez(feature_file, X=features, y=labels, image_names=image_names)
             print(f"Feature salvate in {feature_file}")
             return features, labels, image_names
+        
+    def get_features_single_image(self, image):
+        """Estrae le feature da una singola immagine."""
+        img = self.transform(image).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            feature = self.model(img)
+        return feature.cpu().numpy().squeeze()
 
 
 class NeuralFeatureExtractor(BaseFeatureExtractor):
