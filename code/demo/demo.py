@@ -44,7 +44,8 @@ one_layer_scheduler = torch.optim.lr_scheduler.StepLR(one_layer_optimizer, step_
 one_layer_model_option = ModelOptions(torch.nn.CrossEntropyLoss(), one_layer_optimizer, one_layer_scheduler, input_dim = 2048)
 nn = NeuralNetwork(one_layer_model, one_layer_model_option)
 # load weights
-nn.model.load_state_dict(torch.load("classifier.pth", weights_only=True))
+device = "cuda" if torch.cuda.is_available() else "cpu"
+nn.model.load_state_dict(torch.load("classifier.pth", weights_only=True, map_location=torch.device(device=device)))
 
 def load_image():
     file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg;*.png;*.jpeg")])
@@ -77,7 +78,7 @@ def classify_image(file_path):
     # add 1 dimension for batch
     features = features.unsqueeze(0)
     # to device
-    features = features.to("cuda")
+    features = features.to(device=device)
     with torch.no_grad():
         outputs = one_layer_model(features)
         top_probs, top_indices = torch.topk(outputs, k=10, dim=-1)
